@@ -18,20 +18,19 @@ const savePlan = async(req, res) => {
             return
         }
 
-        const planDetails = await client.hGet(planID, "plan");
-        if (planDetails != null || planDetails == "" || planDetails == {}) {
-            res.status(409).json({"message": "Plan already exists"});
-            return 
-        }
-
         const isSchemaValid = validateJsonSchema(payload);
         if(!isSchemaValid){
             res.status(400).json({"message": `Schema is not valid, validator response : ${isSchemaValid}`})
             return 
         }
 
-        await client.hSet(planID, "plan", JSON.stringify(payload))
+        const planDetails = await client.hGet(planID, "plan");
+        if (planDetails != null || planDetails == "" || planDetails == {}) {
+            res.status(409).json({"message": "Plan already exists"});
+            return 
+        }
 
+        await client.hSet(planID, "plan", JSON.stringify(payload))
         const eTag = etag(JSON.stringify(payload))
         console.log("etag is : ", eTag)
         await client.hSet(planID, "eTag", eTag);
@@ -106,10 +105,14 @@ const deletePlanByID = async(req, res) => {
 const getAllPlans = async (req, res) => {
     try {
         const keysval = await client.keys("*")
+        if(keysval.length === 0){
+            res.status(404).json({message: "No data found in the database"});
+            return;
+        }
+
         const plans = await fetchPlans(keysval);
         res.status(200).json({ message: plans });
-        return 
-        
+
     } catch (error) {
         console.log(error)
         res.status(400).json({ message: "Error in deleting the plan"})
