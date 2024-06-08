@@ -88,13 +88,13 @@ const deletePlanByID = async(req, res) => {
         }
 
         const response = await client.del(planid)
-
+        console.log("delete response", response)
         if (response == 0) {
-            res.status(404).json({message: "plan not found in database", data: response});
+            res.status(404).json({message: "plan not found in database"});
             return    
         }
 
-        res.status(200).json({message: "plan deleted", data: response});
+        res.status(200).json({message: "plan deleted"});
         
     } catch (error) {
         console.log(error)
