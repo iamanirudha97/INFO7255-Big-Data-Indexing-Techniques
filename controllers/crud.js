@@ -1,29 +1,42 @@
-const { json } = require("express")
-const { client } = require("../config/db")
+const { json } = require("express");
+const etag = require("etag");
+const { client } = require("../config/db");
+const { validateJsonSchema } = require("../schema/schemaValidator");
 
 const savePlan = async(req, res) => {
     try {
         const payload = req.body
         if (payload == null) {
-            res.status(400).json({"message": "payload is empty"})
+            res.status(400).json({"message": "payload is empty"});
             return
         }
 
-        const planID = payload?.objectId
+        const planID = payload?.objectId;
         if (planID == null) {
-            res.status(400).json({"message": "planID is missing"})
+            res.status(400).json({"message": "planID is missing"});
             return
         }
 
-        const planDetails = await client.get(planID);
-
-        if (planDetails != null || planDetails == "") {
-            res.status(409).json({"message": "Plan already exists"})
+        const planDetails = await client.hGet(planID, "plan");
+        if (planDetails != null || planDetails == "" || planDetails == {}) {
+            res.status(409).json({"message": "Plan already exists"});
             return 
         }
 
-        client.set(planID, JSON.stringify(payload))
-        res.status(200).json({message: "payload saved"})
+        const isSchemaValid = validateJsonSchema(payload);
+        if(!isSchemaValid){
+            res.status(400).json({"message": `Schema is not valid, validator response : ${isSchemaValid}`})
+            return 
+        }
+
+        await client.hSet(planID, "plan", JSON.stringify(payload))
+
+        const eTag = etag(JSON.stringify(payload))
+        console.log("etag is : ", eTag)
+        await client.hSet(planID, "eTag", eTag);
+
+        res.setHeader("ETag", eTag);
+        res.status(201).json({message: "payload saved"})
         return
 
     } catch (error) {
@@ -34,22 +47,31 @@ const savePlan = async(req, res) => {
 
 const getPlanById = async (req, res) => {
     try {
-        const {planid } = req.params;
+        const { planid } = req.params;
         if (planid == null || planid == "" || planid == {}) {
             res.status(400).json({"message": "please provide a plan id to fetch the details"})
             return
         }
 
-        const planDetails = await client.get(planid);
-        const planDetailsPayload = JSON.parse(planDetails)
-
-        if (planDetails == null || planDetails == "") {
-            res.status(409).json({"message": "Plan doesnt exits"})
-            return 
+        const eTagSign = await client.hGet(planid, "eTag");
+       
+        if(eTagSign == req.headers['if-none-match']){
+            console.log("hello from etag");
+            res.setHeader("ETag", eTagSign);
+            res.status(304).json({ message: "plan not updated"})
+            return
         }
 
+        const planDetails = await client.hGet(planid, "plan");
+        const planDetailsPayload = JSON.parse(planDetails);
+
+        if (planDetails == null || planDetails == "") {
+            res.status(404).json({"message": "Plan doesnt exits"})
+            return;
+        }
+
+        res.setHeader("ETag", eTagSign);
         res.status(200).json({message: "payload fetched successfully", data: planDetailsPayload});
-        return
 
     } catch (error) {
         console.log(error)
