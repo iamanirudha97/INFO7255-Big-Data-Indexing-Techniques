@@ -2,6 +2,7 @@ const { json } = require("express");
 const etag = require("etag");
 const { client } = require("../config/db");
 const { validateJsonSchema } = require("../schema/schemaValidator");
+const { fetchPlans } = require("../utils/fetchAllPlans");
 
 const savePlan = async(req, res) => {
     try {
@@ -102,7 +103,21 @@ const deletePlanByID = async(req, res) => {
     }
 }
 
+const getAllPlans = async (req, res) => {
+    try {
+        const keysval = await client.keys("*")
+        const plans = await fetchPlans(keysval);
+        res.status(200).json({ message: plans });
+        return 
+        
+    } catch (error) {
+        console.log(error)
+        res.status(400).json({ message: "Error in deleting the plan"})
+    }
+}
+
 module.exports = {
+    getAllPlans,
     savePlan,
     getPlanById,
     deletePlanByID
