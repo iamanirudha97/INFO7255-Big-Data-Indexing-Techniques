@@ -7,7 +7,7 @@ const { connectToDB, client } = require("./config/db");
 const PORT = 8000;
 const app = express();
 app.use(express.json());
-app.use(bodyParser.json())
+app.use(bodyParser.json());
 
 connectToDB();
 

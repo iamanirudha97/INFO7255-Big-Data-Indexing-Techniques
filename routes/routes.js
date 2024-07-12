@@ -1,11 +1,13 @@
 const express = require('express');
 const { savePlan, getPlanById, deletePlanByID, getAllPlans } = require('../controllers/crud');
+// const { validateToken } = require('../middlewares/verifyToken');
+const { validateToken } = require('../middlewares/auth');
 
 const appRouter = express.Router();
 
-appRouter.post("/v1/plan", savePlan)
-appRouter.get("/v1/plan/:planid", getPlanById)
-appRouter.delete("/v1/plan/:planid", deletePlanByID)
-appRouter.get("/v1/plans", getAllPlans)
+appRouter.post("/v1/plan", validateToken, savePlan)
+appRouter.get("/v1/plan/:planid", validateToken, getPlanById)
+appRouter.delete("/v1/plan/:planid", validateToken, deletePlanByID)
+appRouter.get("/v1/plans",validateToken, getAllPlans)
 
-module.exports = appRouter
+module.exports = appRouter;
