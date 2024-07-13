@@ -1,6 +1,5 @@
 const express = require('express');
 const { savePlan, getPlanById, deletePlanByID, getAllPlans, patchPlan } = require('../controllers/crud');
-// const { validateToken } = require('../middlewares/verifyToken');
 const { validateToken } = require('../middlewares/auth');
 
 const appRouter = express.Router();
