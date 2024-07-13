@@ -128,12 +128,30 @@ const patchPlan = async (req, res) => {
         const { planid } = req.params;
         const patchPlan = req.body;
         
-        let plan = await client.hGet(planid, "plan");    
-        let planDetails = JSON.parse(plan);
-    
+        const plan = await client.hGet(planid, "plan");    
+        const planDetails = JSON.parse(plan);
         const planData = patchPlanData(planDetails, patchPlan);
-        console.log("AFTER : ", planData);
         
+        const isSchemaValid = validateJsonSchema(planData);
+        if(!isSchemaValid){
+            res.status(400).json({"message": `Schema is not valid, validator response : ${isSchemaValid}`});
+            return; 
+        }
+
+        await client.hSet(planid, "plan", JSON.stringify(planData));
+        const eTag = etag(JSON.stringify(planData));
+        console.log("etag is : ", eTag);
+        await client.hSet(planid, "eTag", eTag);
+        
+        const eTagSign = await client.hGet(planid, "eTag");
+        if(eTagSign == req.headers['if-none-match']){
+            console.log("hello from etag");
+            res.setHeader("ETag", eTagSign);
+            res.status(304).json({ message: "plan not updated"})
+            return
+        }
+
+        res.setHeader("ETag", eTag);
         res.status(200).json({data: planData});
         return; 
     } catch (error) {
