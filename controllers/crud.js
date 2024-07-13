@@ -3,6 +3,8 @@ const etag = require("etag");
 const { client } = require("../config/db");
 const { validateJsonSchema } = require("../schema/schemaValidator");
 const { fetchPlans } = require("../utils/fetchAllPlans");
+const merge = require('deepmerge-json');
+const { patchPlanData } = require("../utils/patchPlan");
 
 const savePlan = async(req, res) => {
     try {
@@ -119,9 +121,31 @@ const getAllPlans = async (req, res) => {
     }
 }
 
+const patchPlan = async (req, res) => {
+    try {
+        // const after = merge(planObject, updates);
+
+        const { planid } = req.params;
+        const patchPlan = req.body;
+        
+        let plan = await client.hGet(planid, "plan");    
+        let planDetails = JSON.parse(plan);
+    
+        const planData = patchPlanData(planDetails, patchPlan);
+        console.log("AFTER : ", planData);
+        
+        res.status(200).json({data: planData});
+        return; 
+    } catch (error) {
+        console.log(error);
+        return;
+    }
+}
+
 module.exports = {
     getAllPlans,
     savePlan,
     getPlanById,
-    deletePlanByID
+    deletePlanByID,
+    patchPlan
 }
