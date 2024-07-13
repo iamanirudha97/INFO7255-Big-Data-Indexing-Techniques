@@ -22,14 +22,18 @@ const validateToken = async (req, res, next) => {
             if (err) {
               // Not a valid token
               console.log('Error:', err);
-              res.status(403).json({message: "unauthorized, invalid token"});
-              return;
+              
+              return false;
             }
             // Token successfully verified
-            return payload;
+            return true;
         });
 
         console.log("decoded is : ", decoded);
+        if(!decoded){
+            res.status(403).json({message: "unauthorized, invalid token"});
+            return;
+        }
         next();
     } catch (error) {
         console.log(error);

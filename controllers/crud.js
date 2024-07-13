@@ -1,4 +1,4 @@
-const { json } = require("express");
+// const { json } = require("express");
 const etag = require("etag");
 const { client } = require("../config/db");
 const { validateJsonSchema } = require("../schema/schemaValidator");
@@ -55,13 +55,15 @@ const getPlanById = async (req, res) => {
             return
         }
 
+        const etagHeader = req.headers['if-none-match'];
         const eTagSign = await client.hGet(planid, "eTag");
-       
-        if(eTagSign == req.headers['if-none-match']){
-            console.log("hello from etag");
-            res.setHeader("ETag", eTagSign);
-            res.status(304).json({ message: "plan not updated"})
-            return
+        if(etagHeader){
+            if(eTagSign == etagHeader){
+                console.log("hello from etag");
+                res.setHeader("ETag", eTagSign);
+                res.status(304).json({ message: "plan not updated"})
+                return
+            }
         }
 
         const planDetails = await client.hGet(planid, "plan");
@@ -147,7 +149,7 @@ const patchPlan = async (req, res) => {
         if(eTagSign == req.headers['if-none-match']){
             console.log("hello from etag");
             res.setHeader("ETag", eTagSign);
-            res.status(304).json({ message: "plan not updated"})
+            res.status(304).json({ message: "plan not updated"});
             return
         }
 
