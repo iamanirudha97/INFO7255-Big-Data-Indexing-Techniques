@@ -1,9 +1,7 @@
-// const { json } = require("express");
 const etag = require("etag");
 const { client } = require("../config/db");
 const { validateJsonSchema } = require("../schema/schemaValidator");
 const { fetchPlans } = require("../utils/fetchAllPlans");
-const merge = require('deepmerge-json');
 const { patchPlanData } = require("../utils/patchPlan");
 
 const savePlan = async(req, res) => {
@@ -125,14 +123,20 @@ const getAllPlans = async (req, res) => {
 
 const patchPlan = async (req, res) => {
     try {
-        // const after = merge(planObject, updates);
-
         const { planid } = req.params;
         const patchPlan = req.body;
+
+        const eTagSign = await client.hGet(planid, "eTag");
+        if(eTagSign !== req.headers['if-match']){
+            console.log("hello from etag");
+            res.setHeader("ETag", eTagSign);
+            res.status(412).send();
+            return;
+        };
         
         const plan = await client.hGet(planid, "plan");    
         const planDetails = JSON.parse(plan);
-        const planData = patchPlanData(planDetails, patchPlan);
+        const planData = patchPlanData(planDetails, patchPlan) ;
         
         const isSchemaValid = validateJsonSchema(planData);
         if(!isSchemaValid){
@@ -145,14 +149,6 @@ const patchPlan = async (req, res) => {
         console.log("etag is : ", eTag);
         await client.hSet(planid, "eTag", eTag);
         
-        const eTagSign = await client.hGet(planid, "eTag");
-        if(eTagSign == req.headers['if-none-match']){
-            console.log("hello from etag");
-            res.setHeader("ETag", eTagSign);
-            res.status(304).json({ message: "plan not updated"});
-            return
-        }
-
         res.setHeader("ETag", eTag);
         res.status(200).json({data: planData});
         return; 
